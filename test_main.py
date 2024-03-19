@@ -20,22 +20,22 @@ def parse_pdf(pdf_file):
     file_content = file_content.encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
     page_one = str(page_one).encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
 
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2500,
-        chunk_overlap=20,
-        length_function=len,
-        is_separator_regex=False,
-    )
 
-    paper_fragments = text_splitter.create_documents([file_content])
+    from Utils.split_utils import split_text_to_satisfy_token_limit
+    paper_fragments = split_text_to_satisfy_token_limit(txt=file_content, limit=TOKEN_LIMIT_PER_FRAGMENT)
+    page_one_fragments = split_text_to_satisfy_token_limit(txt=str(page_one), limit=TOKEN_LIMIT_PER_FRAGMENT // 4)
+
+    paper_meta = page_one_fragments[0].split('introduction')[0].split('Introduction')[0].split('INTRODUCTION')[0]
+
+    ############################## <第 1 步，从摘要中提取高价值信息，放到history中> ##################################
+    final_results = []
+    final_results.append(paper_meta)
 
 
     final_results = []
     for fragment in paper_fragments:
         prompt = f"中文总结以下文本:\n\n{fragment}"
         gpt_response = llm(prompt)
-        print(gpt_response)
         final_results.append(gpt_response)
 
     # 将所有摘要连接起来

@@ -20,7 +20,7 @@ def parse_pdf(pdf_file):
     file_content = file_content.encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
     page_one = str(page_one).encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
 
-    # 假设每个字符是一个Token（这是一个简化的假设）
+
     from Utils.split_utils import split_text_to_satisfy_token_limit
     paper_fragments = split_text_to_satisfy_token_limit(txt=file_content, limit=TOKEN_LIMIT_PER_FRAGMENT)
     page_one_fragments = split_text_to_satisfy_token_limit(txt=str(page_one), limit=TOKEN_LIMIT_PER_FRAGMENT // 4)
