@@ -39,8 +39,7 @@ from typing import List, Literal, Optional, Union
 from loguru import logger
 from pydantic import BaseModel, Field
 from transformers import AutoTokenizer, AutoModel
-from utils import process_response, generate_chatglm3, generate_stream_chatglm3
-from sentence_transformers import SentenceTransformer
+from Utils.split_utils import process_response, generate_chatglm3, generate_stream_chatglm3
 
 from sse_starlette.sse import EventSourceResponse
 

@@ -1,57 +1,50 @@
-import fitz
-import time
-import re
-import os
 import gradio as gr
 
-def pdfTOpic(path):
-    pic_folder = 'extracted_images'  # 图片保存的文件夹
-    if not os.path.exists(pic_folder):
-        os.makedirs(pic_folder)
+from langchain.llms import OpenAI
+from dotenv import load_dotenv
+from langchain_community.chat_models.openai import ChatOpenAI
 
-    t0 = time.perf_counter()
+load_dotenv()
 
-    checkXO = r"/Type(?= */XObject)"
-    checkIM = r"/Subtype(?= */Image)"
 
-    try:
-        doc = fitz.open(path)
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Error: Unable to open the PDF file"
+# 初始化OpenAI LLM
+llm = OpenAI(temperature=0.2)
+# llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
-    imgCount = 0
-    lenXREF = doc.xref_length()
+# 解析PDF文件并生成摘要的函数
+def parse_pdf(pdf_file):
+    TOKEN_LIMIT_PER_FRAGMENT = 2500
 
-    print("文件名:{},页数:{},对象:{}".format(path, len(doc), lenXREF - 1))
+    from Utils.split_utils import read_and_clean_pdf_text
+    file_content, page_one = read_and_clean_pdf_text(pdf_file) # （尝试）按照章节切割PDF
+    file_content = file_content.encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
+    page_one = str(page_one).encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
 
-    for i in range(1, lenXREF):
-        text = doc.xref_object(i)
-        isXObject = re.search(checkXO, text)
-        isImage = re.search(checkIM, text)
+    # 假设每个字符是一个Token（这是一个简化的假设）
+    from Utils.split_utils import split_text_to_satisfy_token_limit
+    paper_fragments = split_text_to_satisfy_token_limit(txt=file_content, limit=TOKEN_LIMIT_PER_FRAGMENT)
+    page_one_fragments = split_text_to_satisfy_token_limit(txt=str(page_one), limit=TOKEN_LIMIT_PER_FRAGMENT // 4)
 
-        if not isXObject or not isImage:
-            continue
+    paper_meta = page_one_fragments[0].split('introduction')[0].split('Introduction')[0].split('INTRODUCTION')[0]
 
-        imgCount += 1
-        pix = fitz.Pixmap(doc, i)
-        new_name = os.path.join(pic_folder, path.replace('\\', '_') + f"_img{imgCount}.png")
-        new_name = new_name.replace(':', '')
+    final_results = []
+    for fragment in paper_fragments:
+        prompt = f"中文总结以下文本:\n\n{fragment}"
+        gpt_response = llm(prompt)
+        final_results.append(gpt_response)
 
-        if pix.n < 5:
-            pix.save(new_name)
-        else:
-            pix0 = fitz.Pixmap(fitz.csRGB, pix)
-            pix0.save(new_name)
-            pix0 = None
+    # 将所有摘要连接起来
+    return ' '.join(final_results)
 
-        pix = None
 
-    t1 = time.perf_counter()
-    print("运行时间:{}s".format(t1 - t0))
-    print("提取了{}张图片".format(imgCount))
+# 创建Gradio界面
+iface = gr.Interface(
+    fn=parse_pdf,
+    inputs=gr.inputs.File(type='file'),
+    outputs='text',
+    title="PDF Summarizer",
+    description="Upload a PDF file to get a summary."
+)
 
-    return pic_folder  # 返回图片保存的文件夹路径
-
-iface = gr.Interface(fn=pdfTOpic, inputs="text", outputs="text")
+# 启动Gradio应用
 iface.launch()
