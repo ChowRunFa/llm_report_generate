@@ -5,4 +5,6 @@
 flagged
 
 extracted_images
-.ini
+*.ini
+*.pdf
+export/
