@@ -8,3 +8,5 @@ extracted_images
 *.ini
 *.pdf
 export/
+
+data/
