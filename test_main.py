@@ -27,11 +27,6 @@ def parse_pdf(pdf_file):
 
     paper_meta = page_one_fragments[0].split('introduction')[0].split('Introduction')[0].split('INTRODUCTION')[0]
 
-    ############################## <第 1 步，从摘要中提取高价值信息，放到history中> ##################################
-    final_results = []
-    final_results.append(paper_meta)
-
-
     final_results = []
     for fragment in paper_fragments:
         prompt = f"中文总结以下文本:\n\n{fragment}"

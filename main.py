@@ -1,50 +1,49 @@
+from Object.Paper import Paper
+from Utils.general_utils import markdown_to_html
 import gradio as gr
+import zipfile
+import os
 
-from langchain.llms import OpenAI
-from dotenv import load_dotenv
-from langchain_community.chat_models.openai import ChatOpenAI
+def report_generate_main(file_path):
+    # 检查文件是否为zip文件
+    if zipfile.is_zipfile(file_path):
+        # 创建一个临时目录来解压文件
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            # 创建临时目录
+            temp_dir = "temp_unzip_dir"
+            os.makedirs(temp_dir, exist_ok=True)
+            zip_ref.extractall(temp_dir)
 
-load_dotenv()
+            # 获取解压后的所有文件路径
+            file_paths = [os.path.join(temp_dir, name) for name in zip_ref.namelist()]
 
+            # 为每个文件生成报告
+            reports = []
+            for file in file_paths:
+                p = Paper(file=file)
+                reports.append(markdown_to_html(p.paper_info))
 
-# 初始化OpenAI LLM
-llm = OpenAI(temperature=0.2)
-# llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+            # 清理临时文件和目录
+            for file in file_paths:
+                os.remove(file)
+            os.rmdir(temp_dir)
 
-# 解析PDF文件并生成摘要的函数
-def parse_pdf(pdf_file):
-    TOKEN_LIMIT_PER_FRAGMENT = 2500
-
-    from Utils.split_utils import read_and_clean_pdf_text
-    file_content, page_one = read_and_clean_pdf_text(pdf_file) # （尝试）按照章节切割PDF
-    file_content = file_content.encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
-    page_one = str(page_one).encode('utf-8', 'ignore').decode()  # avoid reading non-utf8 chars
-
-
-    from Utils.split_utils import split_text_to_satisfy_token_limit
-    paper_fragments = split_text_to_satisfy_token_limit(txt=file_content, limit=TOKEN_LIMIT_PER_FRAGMENT)
-    page_one_fragments = split_text_to_satisfy_token_limit(txt=str(page_one), limit=TOKEN_LIMIT_PER_FRAGMENT // 4)
-
-    paper_meta = page_one_fragments[0].split('introduction')[0].split('Introduction')[0].split('INTRODUCTION')[0]
-
-    final_results = []
-    for fragment in paper_fragments:
-        prompt = f"中文总结以下文本:\n\n{fragment}"
-        gpt_response = llm(prompt)
-        final_results.append(gpt_response)
-
-    # 将所有摘要连接起来
-    return ' '.join(final_results)
+            # 返回所有报告的HTML
+            return "<br>".join(reports)  # 使用<br>标签来分隔不同的报告
+    else:
+        # 如果不是zip文件，假设它是一个可以直接处理的文件
+        p = Paper(file=file_path)
+        return markdown_to_html(p.paper_info)
 
 
-# 创建Gradio界面
-iface = gr.Interface(
-    fn=parse_pdf,
-    inputs=gr.inputs.File(type='file'),
-    outputs='text',
-    title="PDF Summarizer",
-    description="Upload a PDF file to get a summary."
-)
-
-# 启动Gradio应用
-iface.launch()
+if __name__ == '__main__':
+    # 创建Gradio界面
+    iface = gr.Interface(
+        fn=report_generate_main,
+        inputs=gr.inputs.File(type='file'),
+        outputs="html",
+        title="LLM Report Generator",
+        description="Upload a PDF file to get a report."
+    )
+    # 启动Gradio应用
+    iface.launch()

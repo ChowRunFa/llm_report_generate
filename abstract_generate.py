@@ -21,6 +21,8 @@ import tiktoken
 
 import fitz, io, os
 from PIL import Image
+from langchain_community.chat_models.openai import ChatOpenAI
+
 
 class Paper:
     def __init__(self, path, title='', url='', abs='', authers=[]):
@@ -31,6 +33,7 @@ class Paper:
         self.section_texts = {}  # 段落内容
         self.abs = abs
         self.title_page = 0
+        self.img = self.get_image_path("D:\Pycharm_Projects\llm_report_generate\extracted_images")
         if title == '':
             self.pdf = fitz.open(self.path)  # pdf文档
             self.title = self.get_title()
@@ -300,7 +303,12 @@ class Report:
         # prevent short strings from being incorrectly used as API keys.
         self.chat_api_list = [api.strip() for api in self.chat_api_list if len(api) > 20]
         self.chatgpt_model = self.config.get('OpenAI', 'CHATGPT_MODEL')
-
+    #     self.chatgpt_model = ChatOpenAI(
+    #     model_name="chatglm",
+    #     openai_api_base="http://localhost:8000/v1",
+    #     openai_api_key="EMPTY",
+    #     streaming=False
+    # )
         self.cur_api = 0
         self.file_format = 'md'
         self.max_token_num = 4096
@@ -541,10 +549,10 @@ class Report:
             )
         else:
             response = openai.ChatCompletion.create(
-                model=self.chatgpt_model,
-                # prompt需要用英语替换，少占用token。
-                messages=messages,
-            )
+                    model=self.chatgpt_model,
+                    # prompt需要用英语替换，少占用token。
+                    messages=messages,
+                )
         result = ''
         for choice in response.choices:
             result += choice.message.content
@@ -652,5 +660,5 @@ def report_generate_main(pdf_path,news_path,patents_path):
 if __name__ == '__main__':
     import time
     start_time = time.time()
-    report_generate_main('D:\Postman\Git\Repo\ChatPaper\datas',r'D:\Pycharm_Projects\llm_report_generate\data\news','D:\Postman\Git\Repo\ChatPaper\data_patent')
+    report_generate_main(r'D:\Pycharm_Projects\llm_report_generate\data\papers',r'D:\Pycharm_Projects\llm_report_generate\data\newss',r'D:\Pycharm_Projects\llm_report_generate\data\patent')
     print("summary time:", time.time() - start_time)
