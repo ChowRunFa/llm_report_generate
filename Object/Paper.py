@@ -18,7 +18,7 @@ class Paper:
     def __init__(self,file):
         self.file = file
         self.paper_info = self.get_paper_info()
-        # self.max_img = self.get_image_path("D:\Pycharm_Projects\llm_report_generate\extracted_images")
+        self.max_img = self.get_image_path("D:\Pycharm_Projects\llm_report_generate\extracted_images")
 
     def get_image_path(self, pic_path):
         if not os.path.exists(pic_path):
